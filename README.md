@@ -1,30 +1,58 @@
 # Unicode2LCD
-Transcoding a Unicode string containing Cyrillic characters into a string for output to a Russified LCD display.
+Convert a Unicode string containing Cyrillic characters to a string for display on a Cyrillic-enabled LCD.
+The library works only with LCDs with built-in support for Cyrillic characters.
 
-I encountered the problem of displaying messages in Russian on an LCD display. It turned out that the display's character generator was missing Cyrillic characters that had similar shapes to Latin characters, such as 'A'. To display a Cyrillic string on such an LCD display, I had to replace the missing Cyrillic characters with Latin characters. This is quite inconvenient and takes some time. To make this task easier, I wrote several small programs that will help display Cyrillic on an LCD display. IMPORTANT: This applies to LCD displays that have been Russified by the manufacturer (with Cyrillic character support).
+Due to the specific nature of the problem being solved, the following text is in Russian. Interested foreign specialists may request a translator.
 
-Show_charset - displays characters from 0x00 to 0xFF on the screen. This is useful for viewing the display's character generator. Once the screen is full, it waits for user input via the COM port.
+Преобразование строки Unicode, содержащей кириллические символы, в строку для вывода ЖК-дисплей с поддержкой кириллицы.
+Библиотека работает только с LCD со встроенной поддержкой символов кириллицы.
 
-Create_init_str is a program that generates a string for initializing a variable in C format. The initial string is read via the COM port, precoded, and output to the LCD in readable form and to the COM port in C format. Example of COM port output:
+Для чего это нужна эта библиотека:
 
-{0xa8, 'p', 0xb8, 0xb3, 'e', ​​0xbf, ',', ' ', 'M', 0xb8, 'p', '!', 0x00}; // Привет, Мир!
+1. Перекодировка строк с кириллицей "на лету". Функция void Unicode2LCD(unsigned char *buf)
+2. Создание строковых констант готовых к выводу на LCD. Это позволяет Вам не тащить в код программы таблиц перекодировки символов и кода соответствующих функций, что благоприятно скажется на скорости выполнения программы и используемой ею памяти. Пример:
 
-Just copy the string from the terminal and paste it into your code.
+char Sample1[] = {0xa8, 'p', 0xb8, 0xb3, 'e', 0xbf, ',', ' ', 'M', 0xb8, 'p', '!', 0x00}; // Привет, Мир!
 
-Unicode2LCD is a program that converts strings.
+char Sample2[] = "\xA8\x70\xB8\xB3\x65\xBF\x2C \x4D\xB8\x70\x21"; // Привет, Мир!
 
-Sample_Unicode2LCD is an example of using the above programs.
+Две ключевых задачи решаемой этой библиотекой:
 
-Я столкнулся с задачей вывода сообщений на русском языке на LCD дисплей. Выяснилось что в знакогенераторе дисплея отсутствуют символы кириллицы имеющие сходное начертание с символами латинского языка, например, ' А' . Что бы вывести строку кириллицы на такой LCD дисплей приходится заменять в строке отсутствующие символы кириллицы на символы латинского алфавита. Это довольно неудобно и занимает некоторое время. Что бы облегчить эту задачу я написал несколько небольших программ, которые помогут с выводом кириллицы на LCD дисплей. ВАЖНО: речь идет о LCD дисплях русифицированных производителем (с поддержкой символов кириллицы).
+1. В знакогенераторе LCD отсутствуют символы кириллицы имеющие сходное начертание с символами латинского алфавита, например, 'А'.
+2. Библиотечные функции не умеют работать с кодировкой Unicode. В результате если выполнить код:
 
-Show_charset - показывает на экране символы с 0х00 до 0хFF Будет полезна для просмотра знакогенератора дисплея. По заполнении экрана ждет от пользователя ввода через COM порт.
+  lcd.print("Привет, Мир!"); // Hello, World!
 
-Create_init_str - программа формирующая строку для инициализации переменной в формате языка C. Исходная строка считывается через COM порт, прекодируется, выводится на LCD в читаемом виде и в COM порт в формате языка C. Пример вывода в  COM порт: 
+то в результате на экране получите нечитаемый набор символов. Что бы вывести подобную строку на LCD со встроенной поддержкой символов кириллицы приходится заменять в строке отсутствующие символы кириллицы на символы латинского алфавита и выполнять перекодировку строки. Все это делает представленная библиотека.
+
+ОПИСАНИЕ ФУНКЦИЙ
+
+void Show_charset(void) - показывает на LCD символы с 0х00 до 0хFF Будет полезна для просмотра знакогенератора дисплея и поможет Вам установить есть ли символы кириллицы в знакогенераторе LCD. По заполнении экрана ожидает от пользователя ввода через COM порт (монитор порта).
+
+void Create_init_str(unsigned char *buf) - функция формирующая строку для инициализации переменной в формате языка C. Достаточно скопировать строку из терминала и вставить её в свой код. Выводит перекодированную строку на LCD (если определена LCD_present).
+
+void Unicode2LCD(unsigned char *buf) - функция выполняющая перекодировку строки. ВАЖНО: *buf должен находиться в ОЗУ микроконтроллера т.к. перекодировка производится непосредственно в unsigned char массиве buf. То есть конструкция типа:
+
+    unsigned char buf[] = "Привет, Мир!";
+    Unicode2LCD(buf);
+
+скорее всего приведет к зависанию микроконтроллера при выполнении. Что бы этого не происходило, копируйте buf в ОЗУ микроконтроллера:
+
+    unsigned char buf[] = "Привет, Мир!";
+    unsigned char *tmp;
+
+    tmp = (unsigned char *)malloc(sizeof(unsigned char) * (strlen((char *)buf) + 1)); // Выделяем память для новой строки + 1 байт для символа конца строки.
+    if(tmp == nullptr)
+        return; // Память выделить не удалось.
+    strcpy((char *)tmp, (char *)buf); // Копируем содержимое buf в ОЗУ
+
+    Unicode2LCD(tmp); // Выполняем перекодировку строки tmp для вывода на LCD
+
+Sample_Unicode2LCD - пример. Исходная строка считывается через COM порт, прекодируется, выводится на LCD (если определена LCD_present) и в COM порт (монитор порта) в формате инициализации символьной переменной языка C в двух вариантах. Пример вывода в COM порт:
 
 {0xa8, 'p', 0xb8, 0xb3, 'e', 0xbf, ',', ' ', 'M', 0xb8, 'p', '!', 0x00}; // Привет, Мир!
 
-Достаточно скопировать строку из терминала и вставить её в свой код.
+"\xA8\x70\xB8\xB3\x65\xBF\x2C \x4D\xB8\x70\x21"; // Привет, Мир!
 
-Unicode2LCD - программа выполняющая перекодировку строки.
+ASCII.png - таблица символов, в соответствии с которой производится перекодировка строк.
 
-Sample_Unicode2LCD - пример использования вышеперечисленных програм.
