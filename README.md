@@ -4,7 +4,7 @@ The library works only with LCDs with built-in support for Cyrillic characters.
 
 Due to the specific nature of the problem being solved, the following text is in Russian. Interested foreign specialists may request a translator.
 
-Преобразование строки Unicode, содержащей кириллические символы, в строку для вывода ЖК-дисплей с поддержкой кириллицы.
+Преобразование строки Unicode, содержащей кириллические символы, в строку для вывода на LCD с поддержкой кириллицы.
 Библиотека работает только с LCD со встроенной поддержкой символов кириллицы.
 
 Для чего это нужна эта библиотека:
